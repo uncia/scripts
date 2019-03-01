@@ -21,6 +21,14 @@ logging.basicConfig(level = logging.INFO,format='[%(asctime)s] :%(levelname)s: %
 reload(sys)
 sys.setdefaultencoding("utf-8")
 from DBUtils.PooledDB import PooledDB
+'''
+Celery
+'''
+from celery import platforms,Celery
+platforms.C_FORCE_ROOT = True
+# Redis连接地址，如果为本机不需要做修改
+broker = 'redis://127.0.0.1:6379/0'
+app = Celery('fofa_spider_ext',broker=broker)
 
 host = ''
 # 数据库连接用户名
@@ -29,9 +37,9 @@ user = ''
 pwd = ''
 # 数据库名称
 db_name = ''
-# 端口号，默认不需要更改
+# 端口号
 port = 3306
-# 编码，默认不需要更改
+# 编码
 charset = 'utf8'
 # FOFA 用户名
 fofa_name = ''
@@ -39,11 +47,11 @@ fofa_name = ''
 fofa_key = ''
 # FOFA 每页数量,默认为1万可自行修改
 page_size = 10000 #10000
-# 起始页码，默认不需要更改
+# 起始页码
 page_start = 1
-# 终止页码,会自动计算计算结果为最大页数，默认不需要更改
+# 终止页码,会自动计算计算结果为最大页数
 page_end = 1
-# 爬虫字段 host,ip,端口,协议,国家,省份,城市，默认不需要更改（建议不要修改）
+# 爬虫字段 host,ip,端口,协议,国家,省份,城市
 fields = ['host','ip','port','protocol','country','region','city']
 
 # port,protocol,country,region,city,host
@@ -73,8 +81,6 @@ def fofa_requests(url):
             rs_text = rs.text
             error_content = rs_text
             results = json.loads(rs_text)
-            total_size = results['size']
-            error = results
             if results['error'] and 'None' not in results['error']:
                 info = u'fofa 错误:'+results['error']+u' 休眠30s'
                 logging.error(info)
@@ -95,7 +101,7 @@ def fofa_requests(url):
 @param page_no 当前页数
 @param page_total 总页数
 '''
-def batch_insert_db(results,page_no,page_total,fofa_sql):
+def batch_insert_db(results,fofa_sql):
     try:
         Z = []
         for result in results:
@@ -104,10 +110,20 @@ def batch_insert_db(results,page_no,page_total,fofa_sql):
         sql = "INSERT IGNORE INTO fofa_spider(id,host,ip,port,protocol,country_name,region_name,city_name,fofa_sql,create_date,update_date) VALUES(DEFAULT,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())"
         cursor.executemany(sql, Z)
         connection.commit()
-        logging.info(u'存入数据库ok,总数量为:'+str(len(Z))+u', page--> '+str(page_no)+'/'+str(page_total))
+        logging.info(u'存入数据库ok,总数量为:'+str(len(Z)))
     except Exception as e:
         logging.error(u"存入数据库错误,错误信息:"+e.message)
         traceback.print_exc()
+
+'''
+celery 爬虫
+@param api_url 爬虫URL
+@param fofa_sql FOFA语句
+'''
+@app.task
+def celery_spider(api_url,fofa_sql):
+    rs = fofa_requests(api_url)
+    batch_insert_db(rs['results'],fofa_sql)
 
 '''
 fofa 爬虫主函数
@@ -121,13 +137,12 @@ def main(fofa_sql):
     total_size = rs['size']
     # 计算页数
     page_end = total_size / page_size + 1 if total_size % page_size != 0 else total_size / page_size
-    # 存入u 数据库
-    batch_insert_db(rs['results'],page_start,page_end,fofa_sql)
+    # 存入数据库
+    batch_insert_db(rs['results'],fofa_sql)
     for page_no in range(1,page_end+1):
         api_url = 'http://fofa.so/api/v1/search/all?email='+fofa_name+'&key='+fofa_key+'&fields='+fields_str+'&size='+str(page_size)+'&page='+str(page_no)+'&qbase64='+base64_str
-        rs = fofa_requests(api_url)
-        batch_insert_db(rs['results'],page_no,page_end,fofa_sql)
-
+        logging.info('send task -->'+api_url)
+        celery_spider.delay(api_url,fofa_sql)
 
 if __name__ == '__main__':
     fofa_sql = 'app="大华-视频监控"'
