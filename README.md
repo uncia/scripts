@@ -1,5 +1,7 @@
 # 工具脚本
 
+[![GitHub](https://img.shields.io/badge/r4v3zn-scripts-green.svg)](https://github.com/0nise/scripts/blob/master/LICENSE)
+
 ## 说明
 
 本仓库为个人工作、生活中使用的脚本，在使用的过程中如果存在问题请提交Issues给我。
