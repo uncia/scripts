@@ -139,7 +139,7 @@ def main(fofa_sql):
     page_end = total_size / page_size + 1 if total_size % page_size != 0 else total_size / page_size
     # 存入数据库
     batch_insert_db(rs['results'],fofa_sql)
-    for page_no in range(1,page_end+1):
+    for page_no in range(2,page_end+1):
         api_url = 'http://fofa.so/api/v1/search/all?email='+fofa_name+'&key='+fofa_key+'&fields='+fields_str+'&size='+str(page_size)+'&page='+str(page_no)+'&qbase64='+base64_str
         logging.info('send task -->'+api_url)
         celery_spider.delay(api_url,fofa_sql)

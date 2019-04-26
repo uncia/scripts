@@ -123,7 +123,7 @@ def main(fofa_sql):
     page_end = total_size / page_size + 1 if total_size % page_size != 0 else total_size / page_size
     # 存入u 数据库
     batch_insert_db(rs['results'],page_start,page_end,fofa_sql)
-    for page_no in range(1,page_end+1):
+    for page_no in range(2,page_end+1):
         api_url = 'http://fofa.so/api/v1/search/all?email='+fofa_name+'&key='+fofa_key+'&fields='+fields_str+'&size='+str(page_size)+'&page='+str(page_no)+'&qbase64='+base64_str
         rs = fofa_requests(api_url)
         batch_insert_db(rs['results'],page_no,page_end,fofa_sql)
