@@ -11,13 +11,18 @@
 ```
 .
 ├── FOFA --> FOFA平台
-└── Struts2 --> Struts2漏洞检测工具
-└── Zabbix --> Zabbix检测工具
+├── Struts2 --> Struts2漏洞检测工具
+├── Zabbix --> Zabbix检测工具
+└── Windows Terminal --> Windows Terminal 程序
 ```
 
 ## 更新日志
 
-2018年4月26日
+2019年5月9日
+
+    - Windows Terminal 程序
+
+2019年4月26日
 
     - 修改项目结构
 
